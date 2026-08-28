@@ -1,0 +1,35 @@
+/* src/index.css */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #0a0e17; /* La couleur C.bg de ton theme.js */
+}
+
+* {
+  box-sizing: border-box; /* Pour que le padding ne casse pas la largeur */
+}
+
+/* Optionnel : cacher la barre de défilement horizontale si elle apparaît */
+body {
+  overflow-x: hidden;
+}
+
+/* Personnalisation de la barre de défilement pour le Dashboard */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3b82f6; /* Couleur bleue de ton thème */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}

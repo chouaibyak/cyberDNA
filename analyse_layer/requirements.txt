@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+elasticsearch
+aiohttp
+pydantic
+scikit-learn
+numpy
+websockets
