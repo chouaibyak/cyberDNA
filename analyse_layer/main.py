@@ -1,6 +1,6 @@
 from fastapi import FastAPI, BackgroundTasks, Request, WebSocket, WebSocketDisconnect
 from services.elastic_service import index_log_to_elastic, close_elastic, es
-from core.processing import process_log_for_ml
+from core.processing import process_log_for_ml, normalizer
 from services.websocket_manager import ws_manager
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -34,6 +34,17 @@ async def get_alert_by_id(alert_id: str):
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/events/{source}/{event_id}")
+async def get_event_by_id(source: str, event_id: str):
+    """Return a raw normal event selected from the dashboard stream."""
+    if source not in {"cowrie", "dionaea", "honeytrap"}:
+        return {"error": "unknown honeypot source"}
+    try:
+        res = await es.get(index=f"honeypot-logs-{source}", id=event_id)
+        return res["_source"]
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.on_event("shutdown")
 async def shutdown():
     await close_elastic()
@@ -52,8 +63,24 @@ async def ingest_logs(request: Request, background_tasks: BackgroundTasks):
 
 async def run_full_pipeline(log_data, source):
     # 1. On attend la fin de l'analyse (qui va aussi remplir security-alerts si besoin)
-    await process_log_for_ml(log_data)
+    analysis = await process_log_for_ml(log_data)
     
     # 2. Une fois l'analyse finie, on archive le log complet
-    await index_log_to_elastic(log_data, source)
+    event_id = await index_log_to_elastic(log_data, source)
 
+    # Les événements normaux sont de la télémétrie : ils apparaissent dans le
+    # flux live mais ne créent jamais une alerte dans security-alerts.
+    if analysis and analysis.get("status") == "normal":
+        norm = normalizer.normalize(log_data)
+        if norm:
+            score = analysis.get("ml", {}).get("risk_score", 0.0)
+            await ws_manager.broadcast({
+                "id": f"log-{event_id or 'pending'}", "es_id": event_id or "unknown",
+                "log_source": source, "time": norm["timestamp"].split("T")[-1][:8],
+                "ip": norm["source_ip"], "pot": norm["honeypot"].capitalize(),
+                "event": norm["event_type"] or "Normal event", "status": "NORMAL",
+                "score": score / 100.0, "tactic": "Normal",
+                "full_details": {"es_index": f"honeypot-logs-{source}",
+                                 "ml_confidence": f"{score}%", "mitre_id": "N/A",
+                                 "advice": "Aucune action requise."},
+            })

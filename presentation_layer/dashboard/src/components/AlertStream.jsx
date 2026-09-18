@@ -37,7 +37,7 @@ export function AlertStream({ alerts, onExport, selectedAlertId, onSelectAlert }
             backgroundColor: C.panelHeader 
           }}>
             <tr style={{ color: C.textDim, textAlign: "left" }}>
-              {["ID", "Time", "Source IP", "Honeypot", "Event Type", "ML Score", "MITRE Tactic"].map((h) => (
+              {["ID", "Time", "Source IP", "Honeypot", "Status", "Event Type", "ML Score", "MITRE Tactic"].map((h) => (
                 <th key={h} style={{ fontWeight: 500, padding: "12px 10px", borderBottom: `2px solid ${C.border}` }}>{h}</th>
               ))}
             </tr>
@@ -46,8 +46,8 @@ export function AlertStream({ alerts, onExport, selectedAlertId, onSelectAlert }
             {/* --- TEST : SI VIDE ON AFFICHE UN MESSAGE --- */}
             {alerts.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: "center", padding: "50px", color: C.textMute }}>
-                  Aucune alerte reçue...
+                <td colSpan="8" style={{ textAlign: "center", padding: "50px", color: C.textMute }}>
+                  Aucun événement reçu...
                 </td>
               </tr>
             ) : (
@@ -70,6 +70,9 @@ export function AlertStream({ alerts, onExport, selectedAlertId, onSelectAlert }
                     <td style={{ ...td, color: C.textMute }}>{a.time}</td>
                     <td style={{ ...td, color: "#93c5fd" }}>{a.ip}</td>
                     <td style={{ ...td, color: "#93c5fd" }}>{a.pot}</td>
+                    <td style={{ ...td, color: a.status === "ATTACK" ? C.red : C.green, fontWeight: 700 }}>
+                      {a.status || "ATTACK"}
+                    </td>
                     <td style={td}>{a.event}</td>
                     <td style={td}><ScoreBadge score={a.score} /></td>
                     <td style={{ ...td, color: C.textMute }}>{a.tactic}</td>

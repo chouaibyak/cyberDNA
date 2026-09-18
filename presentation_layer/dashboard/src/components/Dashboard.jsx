@@ -32,8 +32,8 @@ export default function Dashboard() {
     socket.onmessage = (event) => {
       console.log("Message WebSocket reçu !", event.data); 
       const newAlert = JSON.parse(event.data);
-      // On ajoute la nouvelle alerte au début du tableau (slice pour garder les 20 dernières)
-      setAlerts((prev) => [newAlert, ...prev].slice(0, 20));
+      // Alertes et télémétrie normale dans le même flux live.
+      setAlerts((prev) => [newAlert, ...prev].slice(0, 100));
     };
 
     socket.onerror = (error) => {
@@ -50,7 +50,10 @@ export default function Dashboard() {
     try {
       const vmIP = window.location.hostname || "192.168.189.138";
       // On interroge l'API FastAPI qu'on vient de créer
-      const response = await fetch(`http://${vmIP}:8000/alerts/${alert.es_id}`);
+      const endpoint = alert.log_source
+        ? `events/${alert.log_source}/${alert.es_id}`
+        : `alerts/${alert.es_id}`;
+      const response = await fetch(`http://${vmIP}:8000/${endpoint}`);
       const data = await response.json();
       setFullDetails(data); // On stocke les données brutes d'Elasticsearch
     } catch (err) {
@@ -65,7 +68,7 @@ export default function Dashboard() {
     return {
       // On utilise l'es_id réel provenant de la DB
       es: { 
-        index: "security-alerts", 
+        index: selectedAlert.full_details?.es_index || "security-alerts", 
         type: "_doc", 
         id: selectedAlert.es_id || "Loading..." 
       },
@@ -120,4 +123,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

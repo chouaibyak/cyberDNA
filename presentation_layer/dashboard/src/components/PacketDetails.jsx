@@ -16,7 +16,10 @@ export function PacketDetails({ selectedAlertId, es, ml, rawEsData }) {
         <>
           <div style={{ color: "#4ade80", fontFamily: C.mono, fontSize: 12.5, marginTop: 8, marginBottom: 4 }}>▾ [Real-Time Evidence]</div>
           <JsonRow k="severity" v={rawEsData.severity} indent={1} />
+          <JsonRow k="campaign_id" v={rawEsData.campaign_id || "single event"} indent={1} />
           <JsonRow k="mitre_tech" v={rawEsData.mitre_analysis?.technique_id} indent={1} />
+          <JsonRow k="classification" v={rawEsData.mitre_analysis?.technique_name} indent={1} />
+          <JsonRow k="grouped_events" v={rawEsData.evidence?.event_count} indent={1} />
           <JsonRow k="protocol" v={rawEsData.evidence?.protocol} indent={1} />
           <JsonRow k="dst_port" v={rawEsData.evidence?.port} indent={1} />
         </>

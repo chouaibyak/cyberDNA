@@ -15,43 +15,57 @@ async def index_log_to_elastic(log_data: dict, source: str):
 
     for attempt in range(5):
         try:
-            await es.index(index=index_name, document=log_data)
-            return
+            response = await es.index(index=index_name, document=log_data)
+            return response.get("_id")
         except Exception as error:
             if attempt == 4:
                 print(f"Error Indexing to ES after retries: {error}")
-                return
+                return None
             await asyncio.sleep(2 ** attempt)
 
 async def close_elastic():
     await es.close()
 
-async def get_recent_logs(limit=500):
+async def get_recent_logs(minutes=None, limit=1000):
     """
-    Récupère les derniers logs de tous les honeypots depuis Elasticsearch
-    pour reconstruire la mémoire de l'IA.
+    Récupère les logs récents. 
+    Si 'minutes' est fourni, filtre par temps. Sinon, utilise la limite.
     """
+    # 1. Construction de la requête de base
+    query = {
+        "query": {
+            "bool": {
+                "filter": []
+            }
+        },
+        "sort": [{"@timestamp": {"order": "desc"}}]
+    }
+
+    # 2. Si on demande un filtre par minutes, on ajoute une Range Query
+    if minutes:
+        # On demande les logs dont le timestamp est supérieur ou égal à "maintenant - X minutes"
+        # Format Elasticsearch : "now-5m"
+        query["query"]["bool"]["filter"].append({
+            "range": {
+                "@timestamp": {
+                    "gte": f"now-{minutes}m"
+                }
+            }
+        })
+
     try:
-        # On cherche dans tous les index de honeypots
-        query = {
-            "size": limit,
-            "sort": [{"@timestamp": {"order": "desc"}}]
-        }
-        # On utilise le wildcard * pour chercher dans tous les index honeypot-logs-*
-        response = await es.search(index="honeypot-logs-*", body=query, ignore_unavailable=True)
+        # Recherche sur tous les index de honeypots
+        response = await es.search(
+            index="honeypot-logs-*", 
+            body=query, 
+            size=limit, 
+            ignore_unavailable=True
+        )
         
-        logs = []
-        for hit in response['hits']['hits']:
-            log = dict(hit['_source'])
-            # On ajoute la source du honeypot basée sur le nom de l'index
-            index_name = hit['_index']
-            if 'cowrie' in index_name: log['honeypot_source'] = 'cowrie'
-            elif 'dionaea' in index_name: log['honeypot_source'] = 'dionaea'
-            elif 'honeytrap' in index_name: log['honeypot_source'] = 'honeytrap'
-            
-            logs.append(log)
-            
-        return logs
+        # On extrait les documents sources
+        hits = response.get("hits", {}).get("hits", [])
+        return [hit["_source"] for hit in hits]
+
     except Exception as e:
-        print(f"Erreur lors de la récupération des logs ES: {e}")
+        print(f"[ES ERROR] Erreur lors de la récupération des logs : {e}")
         return []

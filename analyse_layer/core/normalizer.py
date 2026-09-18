@@ -25,7 +25,7 @@ class LogNormalizer:
         self.whitelists = {
             "cowrie": ["username", "password", "input", "session", "hassh"],
             "dionaea": ["credentials", "transport", "file_hash", "src_port"],
-            "honeytrap": ["http.url", "http.method", "http.header.user-agent", "token"]
+            "honeytrap": ["http.url", "http.method", "http.header.user-agent", "token", "body", "payload"]
         }
 
     def _get_nested_value(self, data, key_path):

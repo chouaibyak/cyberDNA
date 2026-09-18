@@ -44,12 +44,19 @@ class FeatureExtractor:
         elif source == "honeytrap":
             method = str(extra.get("http.method", "")).upper()
             url = str(extra.get("http.url", "")).lower()
+            body = str(extra.get("payload", "") or extra.get("body", "")).lower()
             score += self.HONEYTRAP_WEIGHTS.get(method, 0)
             for kw, weight in self.HONEYTRAP_WEIGHTS.items():
                 if kw in url: score = max(score, weight)
+
+            # Détection de WebShell/RCE dans le corps ou l'URL HTTP.
+            danger_keywords = {"<?php": 100, "system(": 100, "eval(": 100, "shell": 50, "base64_decode(": 80}
+            for kw, weight in danger_keywords.items():
+                if kw in body or kw in url:
+                    score = max(score, weight)
         return score
 
-    def extract_features(self, normalized_logs, window_seconds=60):
+    def extract_features(self, normalized_logs, window_seconds=300):
         # On regroupe par (IP, Window_ID)
         windows = defaultdict(list)
         
@@ -99,4 +106,3 @@ class FeatureExtractor:
                 "iat": iat
             }
         return features_results
-
