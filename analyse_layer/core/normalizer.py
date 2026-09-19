@@ -24,8 +24,18 @@ class LogNormalizer:
         }
         self.whitelists = {
             "cowrie": ["username", "password", "input", "session", "hassh"],
-            "dionaea": ["credentials", "transport", "file_hash", "src_port"],
+            "dionaea": ["credentials", "transport", "src_port"],
             "honeytrap": ["http.url", "http.method", "http.header.user-agent", "token", "body", "payload"]
+        }
+        # Les versions/intégrations des honeypots n'utilisent pas toutes le
+        # même nom pour le hash d'un fichier capturé.
+        self.file_hash_mappings = {
+            "dionaea": (
+                ("file_hash", "unknown"), ("sha256", "sha256"),
+                ("sha256_hash", "sha256"), ("sha512", "sha512"),
+                ("sha512_hash", "sha512"), ("md5", "md5"),
+                ("md5_hash", "md5"),
+            ),
         }
 
     def _get_nested_value(self, data, key_path):
@@ -66,4 +76,24 @@ class LogNormalizer:
         for field in whitelist:
             val = self._get_nested_value(raw_log, field) if '.' in field else raw_log.get(field)
             if val is not None: normalized["extra_info"][field] = val
+
+        # Cowrie réutilise `shasum` pour plusieurs artefacts. Un hash de
+        # journal TTY ne doit jamais être présenté comme un hash de malware.
+        if source == "cowrie":
+            shasum = raw_log.get("shasum")
+            event_type = normalized.get("event_type") or ""
+            if shasum and event_type in {
+                "cowrie.session.file_download", "cowrie.session.file_upload"
+            }:
+                normalized["extra_info"]["file_hash"] = shasum
+                normalized["extra_info"]["file_hash_type"] = "sha256"
+            elif shasum and event_type == "cowrie.log.closed":
+                normalized["extra_info"]["tty_hash"] = shasum
+
+        for path, hash_type in self.file_hash_mappings.get(source, ()):
+            value = self._get_nested_value(raw_log, path)
+            if value:
+                normalized["extra_info"]["file_hash"] = value
+                normalized["extra_info"]["file_hash_type"] = hash_type
+                break
         return normalized

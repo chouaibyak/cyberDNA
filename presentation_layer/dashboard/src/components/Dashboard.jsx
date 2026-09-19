@@ -1,7 +1,7 @@
 // src/components/Dashboard.jsx
 // Top-level layout — composes every panel into the 3-row grid from the design.
 // This is what you render from App.jsx: <Dashboard />
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Header } from "./Header";
 import { ThreatIntensityPulse } from "./ThreatIntensityPulse";
 import { TargetDistribution } from "./TargetDistribution";
@@ -11,37 +11,11 @@ import { ReportsManagement } from "./ReportsManagement";
 import { SystemStability } from "./SystemStability";
 import { LLMReport } from "./LLMReport";
 import { C } from "../theme";
-import { pulseData, distribution, alerts as mockAlerts, stability, reports } from "../services/mockData";
+import { pulseData, distribution, stability, reports } from "../services/mockData";
 
-export default function Dashboard() {
-  const [alerts, setAlerts] = useState([]); 
+export default function Dashboard({ alerts = [] }) {
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [fullDetails, setFullDetails] = useState(null);
-
-
-
-  useEffect(() => {
-    // Connexion au WebSocket de ton API FastAPI (on utilise window.location.hostname pour la portabilité)
-    const vmIP = window.location.hostname || "192.168.189.138"; 
-    const socket = new WebSocket(`ws://${vmIP}:8000/ws/alerts`);
-
-    socket.onopen = () => {
-      console.log("WebSocket Connecté au serveur !" + vmIP);
-    };
-
-    socket.onmessage = (event) => {
-      console.log("Message WebSocket reçu !", event.data); 
-      const newAlert = JSON.parse(event.data);
-      // Alertes et télémétrie normale dans le même flux live.
-      setAlerts((prev) => [newAlert, ...prev].slice(0, 100));
-    };
-
-    socket.onerror = (error) => {
-      console.error("Erreur WebSocket :", error);
-    };
-
-    return () => socket.close(); // Ferme proprement si on quitte la page
-  }, []);
 
   const handleSelectAlert = async (alert) => {
     setSelectedAlert(alert);

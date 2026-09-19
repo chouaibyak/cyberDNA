@@ -19,6 +19,15 @@ brute_force_correlator = BruteForceCorrelator(window_seconds=300, threshold=5)
 # l'identifiant Elasticsearch pour que leurs preuves puissent être enrichies.
 sent_alerts = {}
 
+
+def _window_evidence(logs, field, default="N/A"):
+    """Return the most recent non-empty evidence value in a correlated window."""
+    for log in reversed(logs):
+        value = log.get("extra_info", {}).get(field)
+        if value:
+            return value
+    return default
+
 async def process_log_for_ml(raw_log):
     # 1. Normalisation
     norm = normalizer.normalize(raw_log)
@@ -163,10 +172,12 @@ async def process_log_for_ml(raw_log):
                 },
                 "evidence": {
                     "event_count": len(logs_in_this_window),
-                    "command": norm["extra_info"].get("input") or "N/A",
+                    "command": _window_evidence(logs_in_this_window, "input"),
                     "protocol": norm["protocol"],
                     "port": norm["dst_port"],
-                    "file_hash": norm["extra_info"].get("file_hash") or "N/A"
+                    "file_hash": _window_evidence(logs_in_this_window, "file_hash"),
+                    "file_hash_type": _window_evidence(logs_in_this_window, "file_hash_type"),
+                    "tty_hash": _window_evidence(logs_in_this_window, "tty_hash")
                 }
             }
 
