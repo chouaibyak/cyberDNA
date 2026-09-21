@@ -1,12 +1,21 @@
-// src/components/TargetDistribution.jsx
 import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { PieChart as PieIcon } from "lucide-react";
 import { Panel } from "./Panel";
 import { C } from "../theme";
 
-// data prop: [{ name, value, color }], total prop: number shown in the donut center
 export function TargetDistribution({ data, total }) {
+  // Sécurité : si aucune donnée n'est encore arrivée
+  if (!data || data.length === 0) {
+    return (
+      <Panel icon={PieIcon} title="TARGET DISTRIBUTION" live style={{ height: 210 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.textDim, fontFamily: C.mono }}>
+          Waiting for logs...
+        </div>
+      </Panel>
+    );
+  }
+
   return (
     <Panel icon={PieIcon} title="TARGET DISTRIBUTION" live style={{ height: 210 }}>
       <div style={{ display: "flex", alignItems: "center", height: "100%", gap: 20 }}>

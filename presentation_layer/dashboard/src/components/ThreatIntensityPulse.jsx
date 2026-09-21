@@ -1,11 +1,9 @@
-// src/components/ThreatIntensityPulse.jsx
 import React from "react";
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { Activity } from "lucide-react";
 import { Panel } from "./Panel";
 import { C } from "../theme";
 
-// data prop: [{ t, v }] — swap for live websocket data from services/socket.js
 export function ThreatIntensityPulse({ data }) {
   return (
     <Panel icon={Activity} title="THREAT INTENSITY PULSE" live style={{ height: 210 }}>
@@ -18,7 +16,14 @@ export function ThreatIntensityPulse({ data }) {
             </linearGradient>
           </defs>
           <XAxis hide dataKey="t" />
-          <YAxis tick={{ fill: C.textDim, fontSize: 11, fontFamily: C.mono }} axisLine={false} tickLine={false} width={30} />
+          {/* MODIFICATION ICI : Ajout de domain={[0, 'auto']} */}
+          <YAxis 
+            tick={{ fill: C.textDim, fontSize: 11, fontFamily: C.mono }} 
+            axisLine={false} 
+            tickLine={false} 
+            width={30} 
+            domain={[0, 'auto']} 
+          />
           <Tooltip contentStyle={{ background: C.panelHeader, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: C.mono, fontSize: 12 }} />
           <Area type="monotone" dataKey="v" stroke={C.blue} strokeWidth={2} fill="url(#pulseFill)" />
         </AreaChart>
