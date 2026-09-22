@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Header } from "./Header";
 import { ThreatIntensityPulse } from "./ThreatIntensityPulse";
 import { TargetDistribution } from "./TargetDistribution";
@@ -10,7 +10,12 @@ import { LLMReport } from "./LLMReport";
 import { C } from "../theme";
 import { stability as mockStability, reports } from "../services/mockData"; // stability devient mockStability
 
-export default function Dashboard({ alerts = [] }) {
+export default function Dashboard({
+  alerts = [],
+  pulseData = [],
+  counts = { cowrie: 0, dionaea: 0, honeytrap: 0 },
+  stabilityData = [],
+}) {
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [fullDetails, setFullDetails] = useState(null);
 
@@ -18,72 +23,7 @@ export default function Dashboard({ alerts = [] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [honeypotFilter, setHoneypotFilter] = useState("all");
 
-  // --- LOGIQUE PULSE ---
-  const [pulseData, setPulseData] = useState([]);
-  const intensityRef = useRef(0);
-
-  // --- LOGIQUE DISTRIBUTION ---
-  const [counts, setCounts] = useState({ cowrie: 0, dionaea: 0, honeytrap: 0 });
   const COLOR_MAP = { cowrie: "#4d8dfa", dionaea: "#f43f5e", honeytrap: "#fbbf24" };
-
-  // --- LOGIQUE STABILITY (Dynamique) ---
-  const [stabilityData, setStabilityData] = useState([]);
-  const latencyRef = useRef(20); // Latence de base : 20ms
-
-  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8000/ws/alerts");
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      
-      // 1. Pulse Impact
-      const impact = data.status === "ATTACK" ? (data.score * 100 || 50) : 5;
-      intensityRef.current += impact;
-
-      // 2. Distribution Impact
-      const potName = (data.pot || data.honeypot || "").toLowerCase();
-      if (potName in counts) {
-        setCounts(prev => ({ ...prev, [potName]: prev[potName] + 1 }));
-      }
-
-      // 3. Stability Impact (La latence augmente avec chaque log)
-      // Plus le score est élevé, plus la latence augmente (simulation de charge)
-      const latencyIncrease = data.status === "ATTACK" ? 5 : 1;
-      latencyRef.current += latencyIncrease;
-    };
-
-    const interval = setInterval(() => {
-      const now = new Date().toLocaleTimeString([], { hour12: false });
-      
-      // Mise à jour Pulse
-      setPulseData(prev => {
-        const newData = [...prev, { t: now, v: intensityRef.current }];
-        return newData.slice(-30);
-      });
-      intensityRef.current = Math.max(0, intensityRef.current - 20);
-
-      // Mise à jour Stability
-      setStabilityData(prev => {
-        // Uptime : fluctue légèrement entre 99% et 100%
-        const simulatedUptime = 99 + Math.random(); 
-        
-        const newData = [...prev, { 
-          t: now, 
-          uptime: simulatedUptime, 
-          latency: latencyRef.current 
-        }];
-        return newData.slice(-30);
-      });
-
-      // La latence redescend lentement vers la base (20ms)
-      latencyRef.current = Math.max(20, latencyRef.current - 2);
-    }, 1000);
-
-    return () => {
-      socket.close();
-      clearInterval(interval);
-    };
-  }, []);
 
   // ... (useMemo pour dynamicDistribution et alertDetails reste identique)
   const dynamicDistribution = useMemo(() => {
